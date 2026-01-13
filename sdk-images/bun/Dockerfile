@@ -25,10 +25,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     build-essential \
-    python3 \
+    # python3 \
     && apt-get clean && rm -rf /var/lib/apt/lists/* \
     # Create a non-root user named "bun"
-    && useradd --create-home --shell /bin/bash bun \
+    # && useradd --create-home --shell /bin/bash bun \
     # Set up working directory for the bun user
     && mkdir -p /home/bun/work \
     && chown -R bun:bun /home/bun \
@@ -37,10 +37,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Install global npm packages
     && bun install -g \
        typescript \
-       ts-node \
-       nodemon \
-       eslint \
-       prettier
+       #ts-node \
+       #nodemon \
+       # eslint \
+       # prettier
 
 # Copy the portal binary from the builder stage and set permissions
 COPY --from=builder /usr/src/microsandbox/target/release/portal /usr/local/bin/
