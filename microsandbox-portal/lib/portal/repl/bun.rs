@@ -88,6 +88,12 @@ impl Engine for BunEngine {
             // Start Bun process with custom REPL
             // Custom REPL starts with no prompt, no terminal features, and ignores undefined
             let mut process = match Command::new("bun")
+                .args([
+                    "repl",
+                    "--eval", 
+                    // Directly access Bun's global 'repl' object to silence it
+                    "repl.writer.options.prompt=''; repl.displayPrompt=()=>{};"
+                ])
                 .stdin(std::process::Stdio::piped())
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::piped())
