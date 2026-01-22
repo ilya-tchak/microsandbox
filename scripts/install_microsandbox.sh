@@ -45,6 +45,8 @@ error() {
 # Default values
 VERSION="0.2.6"
 NO_CLEANUP=false
+LOCAL_TAR_PATH=""
+VERSION_SPECIFIED=false
 TEMP_DIR="/tmp/microsandbox-install"
 GITHUB_REPO="microsandbox/microsandbox"
 
@@ -57,6 +59,11 @@ for arg in "$@"; do
     case $arg in
         --version=*)
             VERSION="${arg#*=}"
+            VERSION_SPECIFIED=true
+            shift
+            ;;
+        --from-local-tar=*)
+            LOCAL_TAR_PATH="${arg#*=}"
             shift
             ;;
         --no-cleanup)
@@ -65,6 +72,12 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+# Validate arguments
+if [ -n "$LOCAL_TAR_PATH" ] && [ "$VERSION_SPECIFIED" = true ]; then
+    error "Cannot use --version and --from-local-tar simultaneously."
+    exit 1
+fi
 
 # Function to check command existence
 check_command() {
@@ -139,6 +152,25 @@ create_directories() {
         error "Failed to create directories"
         exit 1
     fi
+}
+
+# Prepare local tarball for installation
+prepare_local_tarball() {
+    info "Using local tarball: ${LOCAL_TAR_PATH}"
+
+    if [ ! -f "$LOCAL_TAR_PATH" ]; then
+        error "Local tarball not found at: ${LOCAL_TAR_PATH}"
+        exit 1
+    fi
+
+    # Copy tarball to temp dir and set archive name
+    if ! cp "$LOCAL_TAR_PATH" "$TEMP_DIR/"; then
+        error "Failed to copy local tarball to temporary directory"
+        exit 1
+    fi
+
+    ARCHIVE_NAME=$(basename "$LOCAL_TAR_PATH")
+    info "Using archive: ${ARCHIVE_NAME}"
 }
 
 # Download files from GitHub
@@ -365,8 +397,14 @@ main() {
 
     detect_platform
     create_directories
-    download_files
-    verify_checksum
+
+    if [ -n "$LOCAL_TAR_PATH" ]; then
+        prepare_local_tarball
+    else
+        download_files
+        verify_checksum
+    fi
+
     install_files
 
     # Configure shell environment
