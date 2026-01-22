@@ -171,6 +171,20 @@ prepare_local_tarball() {
 
     ARCHIVE_NAME=$(basename "$LOCAL_TAR_PATH")
     info "Using archive: ${ARCHIVE_NAME}"
+
+    # Try to parse VERSION and PLATFORM from the tarball name
+    PARSED_VERSION=$(echo "$ARCHIVE_NAME" | sed -n 's/^microsandbox-\(.*\)-\([a-z]*-[a-zA-Z0-9_]*\)\.tar\.gz$/\1/p')
+    PARSED_PLATFORM=$(echo "$ARCHIVE_NAME" | sed -n 's/^microsandbox-\(.*\)-\([a-z]*-[a-zA-Z0-9_]*\)\.tar\.gz$/\2/p')
+
+    if [ -n "$PARSED_VERSION" ] && [ -n "$PARSED_PLATFORM" ]; then
+        VERSION=$PARSED_VERSION
+        PLATFORM=$PARSED_PLATFORM
+        info "Parsed from tarball: VERSION=${VERSION}, PLATFORM=${PLATFORM}"
+    else
+        warn "Could not parse version and platform from tarball name: ${ARCHIVE_NAME}"
+        warn "Please ensure the filename is in the format: microsandbox-<version>-<platform>.tar.gz"
+        warn "Proceeding with detected platform: ${PLATFORM} and default/specified version: ${VERSION}"
+    fi
 }
 
 # Download files from GitHub
@@ -242,6 +256,15 @@ install_files() {
     info "Extracting files..."
     cd "$TEMP_DIR" || exit 1
 
+    # Dynamically determine the extract directory name from the tarball's contents.
+    # This is more robust and works for both local and remote archives.
+    EXTRACT_DIR=$(tar tzf "$ARCHIVE_NAME" | head -n 1 | cut -f1 -d"/")
+    if [ -z "$EXTRACT_DIR" ]; then
+        error "Could not determine extract directory from archive: $ARCHIVE_NAME"
+        exit 1
+    fi
+    info "Determined extraction directory: ${EXTRACT_DIR}"
+
     if ! tar xzf "$ARCHIVE_NAME" 2>/tmp/tar_error.log; then
         error "Failed to extract archive"
         error "Archive: $ARCHIVE_NAME"
@@ -249,7 +272,6 @@ install_files() {
         exit 1
     fi
 
-    EXTRACT_DIR="microsandbox-${VERSION}-${PLATFORM}"
     if [ ! -d "$EXTRACT_DIR" ]; then
         error "Expected directory not found after extraction: $EXTRACT_DIR"
         error "Archive contents:"
